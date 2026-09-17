@@ -1,7 +1,7 @@
 #!/bin/bash
 
 install_dependencies() {
-    pip install requests pyfiglet rich psutil
+    pip install requests pyfiglet rich psutil pyTelegramBotAPI
 }
 
 install_termux_dependencies() {
@@ -9,13 +9,13 @@ install_termux_dependencies() {
     pkg upgrade -y
     pkg install python -y
     pkg install clang -y
-    pip install requests pyfiglet rich psutil
+    pip install requests pyfiglet rich psutil pyTelegramBotAPI
 }
 
 install_linux_dependencies() {
     sudo apt update -y
     sudo apt install python3-pip python3-dev -y
-    pip3 install requests pyfiglet rich psutil
+    pip3 install requests pyfiglet rich psutil pyTelegramBotAPI
 }
 
 if [[ $TERMUX_VERSION ]]; then
@@ -29,13 +29,13 @@ else
 fi
 
 echo "Verifying installation..."
-python3 -c "import requests, pyfiglet, rich, psutil; print('All dependencies are installed successfully!')"
+python3 -c "import requests, pyfiglet, rich, psutil, telebot; print('All dependencies are installed successfully!')"
 
 if [ $? -ne 0 ]; then
     echo "Installation failed! Trying alternate method..."
     echo "If you are on Linux, try manually installing the dependencies using the following commands:"
     echo "1. sudo apt install python3-pip python3-dev"
-    echo "2. pip3 install requests pyfiglet rich psutil"
+    echo "2. pip3 install requests pyfiglet rich psutil pyTelegramBotAPI"
     echo "If you are on Termux, ensure you have the latest version of Termux and try running the script again."
     exit 1
 fi
