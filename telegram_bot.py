@@ -3,6 +3,7 @@ import sys
 import html
 import logging
 import telebot
+from telebot.apihelper import ApiTelegramException
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, CallbackQuery
 from mail_service import MailService
 
@@ -39,6 +40,22 @@ EMOJIS = {
 }
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+
+def safe_edit_message_text(bot, text, chat_id=None, message_id=None, inline_message_id=None, parse_mode=None, reply_markup=None):
+    try:
+        return bot.edit_message_text(
+            text,
+            chat_id=chat_id,
+            message_id=message_id,
+            inline_message_id=inline_message_id,
+            parse_mode=parse_mode,
+            reply_markup=reply_markup,
+        )
+    except ApiTelegramException as e:
+        if "message is not modified" in str(e):
+            logging.info(f"Ignored 'message is not modified' exception for chat_id={chat_id}, message_id={message_id}")
+            return None
+        raise e
 
 def get_session(user_id):
     return user_sessions.get(user_id)
@@ -157,8 +174,8 @@ def create_bot(token):
                 f"👑 <b>XTempmail Main Control Panel</b> ✨\n\n"
                 f"Select an option using the buttons below:"
             )
-            bot.edit_message_text(
-                caption, chat_id=chat_id, message_id=call.message.message_id,
+            safe_edit_message_text(
+                bot, caption, chat_id=chat_id, message_id=call.message.message_id,
                 reply_markup=build_main_menu(user_id)
             )
             bot.answer_callback_query(call.id)
@@ -191,7 +208,7 @@ def create_bot(token):
             if user_id in user_sessions:
                 del user_sessions[user_id]
                 text = "🗑️ <b>Your temporary email session has been deleted!</b>\n\nYou can generate a new one anytime."
-                bot.edit_message_text(text, chat_id=chat_id, message_id=call.message.message_id, reply_markup=build_main_menu(user_id))
+                safe_edit_message_text(bot, text, chat_id=chat_id, message_id=call.message.message_id, reply_markup=build_main_menu(user_id))
                 bot.answer_callback_query(call.id, "Session deleted")
             else:
                 bot.answer_callback_query(call.id, "No active session to delete", show_alert=True)
@@ -233,7 +250,7 @@ def generate_email_action(bot, chat_id, user_id, message_id=None):
         text = "❌ <b>Failed to generate email address!</b>\n\nPlease try again in a few moments."
 
     if message_id:
-        bot.edit_message_text(text, chat_id=chat_id, message_id=message_id, reply_markup=build_main_menu(user_id))
+        safe_edit_message_text(bot, text, chat_id=chat_id, message_id=message_id, reply_markup=build_main_menu(user_id))
     else:
         bot.send_message(chat_id, text, reply_markup=build_main_menu(user_id))
 
@@ -258,7 +275,7 @@ def check_inbox_action(bot, chat_id, user_id, message_id=None):
         markup = build_inbox_menu(messages)
 
     if message_id:
-        bot.edit_message_text(text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
+        safe_edit_message_text(bot, text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
     else:
         bot.send_message(chat_id, text, reply_markup=markup)
 
@@ -295,7 +312,7 @@ def read_message_action(bot, chat_id, user_id, msg_id, message_id=None):
 
     if message_id:
         try:
-            bot.edit_message_text(text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
+            safe_edit_message_text(bot, text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
         except Exception:
             bot.send_message(chat_id, text, reply_markup=markup)
     else:
@@ -316,7 +333,7 @@ def show_stats_action(bot, chat_id, user_id, message_id=None):
 
     markup = build_back_menu()
     if message_id:
-        bot.edit_message_text(text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
+        safe_edit_message_text(bot, text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
     else:
         bot.send_message(chat_id, text, reply_markup=markup)
 
@@ -338,7 +355,7 @@ def show_help_action(bot, chat_id, message_id=None):
     )
     markup = build_back_menu()
     if message_id:
-        bot.edit_message_text(text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
+        safe_edit_message_text(bot, text, chat_id=chat_id, message_id=message_id, reply_markup=markup)
     else:
         bot.send_message(chat_id, text, reply_markup=markup)
 
