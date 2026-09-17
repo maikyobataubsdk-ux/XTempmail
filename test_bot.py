@@ -101,5 +101,48 @@ class TestTelegramBotMarkups(unittest.TestCase):
         bot = telegram_bot.create_bot("123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11")
         self.assertIsNotNone(bot)
 
+class TestSafeEditMessageText(unittest.TestCase):
+    def test_safe_edit_message_text_success(self):
+        mock_bot = MagicMock()
+        mock_bot.edit_message_text.return_value = "Success"
+        res = telegram_bot.safe_edit_message_text(mock_bot, "New text", chat_id=123, message_id=456)
+        self.assertEqual(res, "Success")
+        mock_bot.edit_message_text.assert_called_once_with(
+            "New text",
+            chat_id=123,
+            message_id=456,
+            inline_message_id=None,
+            parse_mode=None,
+            reply_markup=None,
+        )
+
+    def test_safe_edit_message_text_unmodified(self):
+        mock_bot = MagicMock()
+        exception = telegram_bot.ApiTelegramException(
+            function_name="editMessageText",
+            result=MagicMock(),
+            result_json={
+                "error_code": 400,
+                "description": "Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message"
+            }
+        )
+        mock_bot.edit_message_text.side_effect = exception
+        res = telegram_bot.safe_edit_message_text(mock_bot, "Same text", chat_id=123, message_id=456)
+        self.assertIsNone(res)
+
+    def test_safe_edit_message_text_other_exception(self):
+        mock_bot = MagicMock()
+        exception = telegram_bot.ApiTelegramException(
+            function_name="editMessageText",
+            result=MagicMock(),
+            result_json={
+                "error_code": 400,
+                "description": "Bad Request: chat not found"
+            }
+        )
+        mock_bot.edit_message_text.side_effect = exception
+        with self.assertRaises(telegram_bot.ApiTelegramException):
+            telegram_bot.safe_edit_message_text(mock_bot, "Text", chat_id=123, message_id=456)
+
 if __name__ == "__main__":
     unittest.main()
